@@ -1,0 +1,12 @@
+[tool.black]
+line-length = 79
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs         # exclude a directory named eggs
+  | \.git          # exclude the .git directory
+  | __pycache__   # exclude the __pycache__ directory
+  | .venv
+)/
+'''
