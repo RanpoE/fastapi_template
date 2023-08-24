@@ -1,10 +1,7 @@
-from typing import Union
-
 from fastapi import FastAPI
 
 from fastapi.middleware.cors import CORSMiddleware
 from api.api import router as root_router
-from decimal import Decimal
 
 description = """
     Template project using FastAPI. 🚀
