@@ -14,12 +14,6 @@ app = FastAPI(
 )
 
 
-def sample_ds(
-    kkald, dasdasd, dasdas, sdasd, asdasdas, adasda, ddds, sasdad, sdsd, dasdasdq
-):
-    return "hello"
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,5 +23,3 @@ app.add_middleware(
 )
 
 app.include_router(root_router)
-
-sample_ds()
