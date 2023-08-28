@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, UploadFile, Depends
 from ultralytics import YOLO
 import base64
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
+from middleware.authentication import authenticate
 
 
 class UpdateProfileSchema(BaseModel):
@@ -14,7 +15,7 @@ model = YOLO("ml-models/yolov8n.pt")
 router = APIRouter()
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(authenticate)])
 async def basic():
     try:
         return {"message": "Sekai"}
