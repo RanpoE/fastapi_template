@@ -1,7 +1,7 @@
 services:
   - type: web
     name: fastapi-template
-    env: python
+    runtime: python
     plan: starter
     region: oregon
     buildCommand: pip install -r requirements.server.txt
