@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: fastapi-template
+    env: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -r requirements.server.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: appdb
+      - key: MONGO_COLLECTION
+        value: recipes
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: UPLOAD_IMAGES
+        value: "false"
+      - key: ROBOFLOW_API_KEY
+        sync: false
+      - key: ROBOFLOW_API_URL
+        value: https://serverless.roboflow.com

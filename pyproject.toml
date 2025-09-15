@@ -47,4 +47,4 @@ target-version = "py38"
 max-complexity = 10
 
 [tool.black]
-line-length = 88
+line-length = 79
