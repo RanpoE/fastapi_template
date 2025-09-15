@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     # Imported only for type checking; no runtime dependency
     from pymongo import MongoClient
 
-_client: Optional[MongoClient] = None
+_client: Optional["MongoClient"] = None
 
 
 def get_collection():
