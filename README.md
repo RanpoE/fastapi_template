@@ -8,6 +8,12 @@ Environment
 - `MONGO_DB` (default: `appdb`)
 - `MONGO_COLLECTION` (default: `recipes`)
 
+Local Docker
+- Build: `docker build -t fastapi-template .`
+- Run: `docker run --env-file .env -p 8000:8000 fastapi-template`
+- API will be available at `http://localhost:8000/`
+- Ensure `.env` contains the environment variables above plus any optional Cloudinary/Roboflow keys.
+
 Install Dependency
 - `pip install pymongo` (MongoDB driver)
 - `pip install cloudinary` (Cloudinary uploads)
