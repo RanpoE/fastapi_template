@@ -85,6 +85,7 @@ async def create_recipe_with_image(
 ):
     # Parse list fields
     try:
+        
         if not isinstance(ingredients, list) or not all(
             isinstance(i, str) for i in ingredients
         ):
