@@ -79,20 +79,18 @@ def create_recipe(payload: RecipeCreate):
 async def create_recipe_with_image(
     name: str = Form(...),
     rating: float = Form(...),
-    ingredients: str = Form(..., description="JSON array of strings"),
-    instructions: str = Form(..., description="JSON array of strings"),
+    ingredients: List[str] = Form(..., description="JSON array of strings"),
+    instructions: List[str] = Form(..., description="JSON array of strings"),
     image: UploadFile = File(...),
 ):
     # Parse list fields
     try:
-        ingredients_list = json.loads(ingredients)
-        instructions_list = json.loads(instructions)
-        if not isinstance(ingredients_list, list) or not all(
-            isinstance(i, str) for i in ingredients_list
+        if not isinstance(ingredients, list) or not all(
+            isinstance(i, str) for i in ingredients
         ):
             raise ValueError("ingredients must be a JSON array of strings")
-        if not isinstance(instructions_list, list) or not all(
-            isinstance(i, str) for i in instructions_list
+        if not isinstance(instructions, list) or not all(
+            isinstance(i, str) for i in instructions
         ):
             raise ValueError("instructions must be a JSON array of strings")
     except Exception as e:
@@ -119,8 +117,8 @@ async def create_recipe_with_image(
         "name": name,
         "rating": float(rating),
         "image": image_url,  # public Cloudinary URL
-        "ingredients": ingredients_list,
-        "instructions": instructions_list,
+        "ingredients": ingredients,
+        "instructions": instructions,
     }
 
     result = col.insert_one(doc)
