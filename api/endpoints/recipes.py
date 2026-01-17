@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
 from pydantic import BaseModel, Field
@@ -79,25 +79,36 @@ def create_recipe(payload: RecipeCreate):
 async def create_recipe_with_image(
     name: str = Form(...),
     rating: float = Form(...),
-    ingredients: List[str] = Form(..., description="JSON array of strings"),
-    instructions: List[str] = Form(..., description="JSON array of strings"),
+    ingredients: Union[str, List[str]] = Form(
+        ..., description="JSON array of strings"
+    ),
+    instructions: Union[str, List[str]] = Form(
+        ..., description="JSON array of strings"
+    ),
     image: UploadFile = File(...),
 ):
-    # Parse list fields
-    try:
-        
-        if not isinstance(ingredients, list) or not all(
-            isinstance(i, str) for i in ingredients
+    def _coerce_list(field_name: str, raw_value: Union[str, List[str]]):
+        if isinstance(raw_value, list):
+            parsed = raw_value
+        else:
+            try:
+                parsed = json.loads(raw_value)
+            except json.JSONDecodeError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{field_name} must be a JSON array of strings",
+                ) from exc
+        if not isinstance(parsed, list) or not all(
+            isinstance(i, str) for i in parsed
         ):
-            raise ValueError("ingredients must be a JSON array of strings")
-        if not isinstance(instructions, list) or not all(
-            isinstance(i, str) for i in instructions
-        ):
-            raise ValueError("instructions must be a JSON array of strings")
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid list payloads: {e}"
-        )
+            raise HTTPException(
+                status_code=400,
+                detail=f"{field_name} must be a JSON array of strings",
+            )
+        return parsed
+
+    ingredients_list = _coerce_list("ingredients", ingredients)
+    instructions_list = _coerce_list("instructions", instructions)
 
     # Upload image to Cloudinary
     try:
@@ -118,8 +129,8 @@ async def create_recipe_with_image(
         "name": name,
         "rating": float(rating),
         "image": image_url,  # public Cloudinary URL
-        "ingredients": ingredients,
-        "instructions": instructions,
+        "ingredients": ingredients_list,
+        "instructions": instructions_list,
     }
 
     result = col.insert_one(doc)
