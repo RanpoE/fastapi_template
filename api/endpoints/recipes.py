@@ -174,17 +174,20 @@ async def create_recipe_with_image(
             )
 
         name_value = name or ""
-        rating_value = float(rating) if rating is not None else 
-        print("Ingredients:", ingredients)
+        rating_value = float(rating) if rating is not None else 0
         ingredients_list = _coerce_list("ingredients", ingredients)  # type: ignore[arg-type]
         instructions_list = _coerce_list("instructions", instructions)  # type: ignore[arg-type]
-        print("Ingredients List:", ingredients_list)
+        
 
         try:
             image_bytes = await image.read()  # type: ignore[union-attr]
         except Exception as exc:
             raise HTTPException(status_code=400, detail="Invalid image file") from exc
         image_filename = image.filename or "upload"  # type: ignore[union-attr]
+
+    print("Ingredients:", ingredients)
+    
+    print("Ingredients List:", ingredients_list)
 
     try:
         image_url = upload_image_bytes(
