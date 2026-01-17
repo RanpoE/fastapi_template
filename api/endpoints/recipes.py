@@ -106,9 +106,13 @@ async def create_recipe_with_image(
                 detail=f"{field_name} must be a JSON array of strings",
             )
         return parsed
+    
+    print("Received ingredients:", ingredients)
 
     ingredients_list = _coerce_list("ingredients", ingredients)
     instructions_list = _coerce_list("instructions", instructions)
+
+    print("Parsed ingredients:", ingredients_list)
 
     # Upload image to Cloudinary
     try:
