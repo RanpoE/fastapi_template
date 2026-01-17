@@ -100,24 +100,44 @@ async def create_recipe_with_image(
     image: Optional[UploadFile] = File(None),
 ):
     def _coerce_list(field_name: str, raw_value: Union[str, List[str]]):
-        if isinstance(raw_value, list):
-            parsed = raw_value
-        else:
+        def _parse_json_array(payload: str) -> List[str]:
             try:
-                parsed = json.loads(raw_value)
+                parsed_json = json.loads(payload)
             except json.JSONDecodeError as exc:
                 raise HTTPException(
                     status_code=400,
                     detail=f"{field_name} must be a JSON array of strings",
                 ) from exc
-        if not isinstance(parsed, list) or not all(
-            isinstance(i, str) for i in parsed
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail=f"{field_name} must be a JSON array of strings",
-            )
-        return parsed
+            if not isinstance(parsed_json, list) or not all(
+                isinstance(i, str) for i in parsed_json
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{field_name} must be a JSON array of strings",
+                )
+            return parsed_json
+
+        if isinstance(raw_value, list):
+            if (
+                len(raw_value) == 1
+                and isinstance(raw_value[0], str)
+                and raw_value[0].strip().startswith("[")
+            ):
+                return _parse_json_array(raw_value[0])
+            if not all(isinstance(i, str) for i in raw_value):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{field_name} must be a JSON array of strings",
+                )
+            return raw_value
+
+        if isinstance(raw_value, str):
+            return _parse_json_array(raw_value)
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"{field_name} must be a JSON array of strings",
+        )
 
     def _decode_json_image(image_value: str) -> bytes:
         if not image_value:
