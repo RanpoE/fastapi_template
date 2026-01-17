@@ -1,10 +1,21 @@
 from typing import List, Optional, Union
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    Query,
+    Request,
+)
 from pydantic import BaseModel, Field
+from pydantic.error_wrappers import ValidationError
 
 from db.mongo import get_collection
 from services.cloudinary_service import upload_image_bytes
+import base64
+import binascii
 import json
 import re
 
@@ -77,15 +88,16 @@ def create_recipe(payload: RecipeCreate):
 
 @router.post("/with-image", response_model=RecipeOut, status_code=201)
 async def create_recipe_with_image(
-    name: str = Form(...),
-    rating: float = Form(...),
-    ingredients: Union[str, List[str]] = Form(
-        ..., description="JSON array of strings"
+    request: Request,
+    name: Optional[str] = Form(None),
+    rating: Optional[float] = Form(None),
+    ingredients: Optional[Union[str, List[str]]] = Form(
+        None, description="JSON array of strings"
     ),
-    instructions: Union[str, List[str]] = Form(
-        ..., description="JSON array of strings"
+    instructions: Optional[Union[str, List[str]]] = Form(
+        None, description="JSON array of strings"
     ),
-    image: UploadFile = File(...),
+    image: Optional[UploadFile] = File(None),
 ):
     def _coerce_list(field_name: str, raw_value: Union[str, List[str]]):
         if isinstance(raw_value, list):
@@ -106,19 +118,77 @@ async def create_recipe_with_image(
                 detail=f"{field_name} must be a JSON array of strings",
             )
         return parsed
-    
-    print("Received ingredients:", ingredients)
 
-    ingredients_list = _coerce_list("ingredients", ingredients)
-    instructions_list = _coerce_list("instructions", instructions)
+    def _decode_json_image(image_value: str) -> bytes:
+        if not image_value:
+            raise HTTPException(
+                status_code=400,
+                detail="image must be provided in the JSON payload",
+            )
 
-    print("Parsed ingredients:", ingredients_list)
+        header, _, data = image_value.partition(",")
+        payload = data if _ else image_value
+        try:
+            return base64.b64decode(payload, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="image must be a base64 encoded string",
+            ) from exc
 
-    # Upload image to Cloudinary
+    content_type = (request.headers.get("content-type") or "").lower()
+    expects_json = "application/json" in content_type
+
+    if expects_json:
+        try:
+            raw_payload = await request.json()
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
+        try:
+            recipe_payload = RecipeCreate(**raw_payload)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=exc.errors()) from exc
+
+        name_value = recipe_payload.name
+        rating_value = recipe_payload.rating
+        ingredients_list = recipe_payload.ingredients
+        instructions_list = recipe_payload.instructions
+        image_bytes = _decode_json_image(recipe_payload.image)
+        image_filename = raw_payload.get("filename") or "json-upload"
+    else:
+        missing_fields = [
+            field
+            for field, value in (
+                ("name", name),
+                ("rating", rating),
+                ("ingredients", ingredients),
+                ("instructions", instructions),
+                ("image", image),
+            )
+            if value is None
+        ]
+        if missing_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing form fields: {', '.join(missing_fields)}",
+            )
+
+        name_value = name or ""
+        rating_value = float(rating) if rating is not None else 
+        print("Ingredients:", ingredients)
+        ingredients_list = _coerce_list("ingredients", ingredients)  # type: ignore[arg-type]
+        instructions_list = _coerce_list("instructions", instructions)  # type: ignore[arg-type]
+        print("Ingredients List:", ingredients_list)
+
+        try:
+            image_bytes = await image.read()  # type: ignore[union-attr]
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="Invalid image file") from exc
+        image_filename = image.filename or "upload"  # type: ignore[union-attr]
+
     try:
-        file_bytes = await image.read()
         image_url = upload_image_bytes(
-            file_bytes, original_filename=image.filename
+            image_bytes, original_filename=image_filename
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -130,8 +200,8 @@ async def create_recipe_with_image(
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
     doc = {
-        "name": name,
-        "rating": float(rating),
+        "name": name_value,
+        "rating": float(rating_value),
         "image": image_url,  # public Cloudinary URL
         "ingredients": ingredients_list,
         "instructions": instructions_list,
